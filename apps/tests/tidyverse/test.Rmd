@@ -1,0 +1,27 @@
+---
+title: "Test"
+author: "jose_carmona"
+runtime: shiny
+---
+
+##
+##
+### Carga de paquetes
+
+Prueba
+
+```{r}
+library(ggplot2)
+
+test <- read.csv("/data/test.csv")
+
+ggplot(test, aes(id, num)) +
+  geom_point(aes(colour = id)) +
+  labs(
+    title = "Titulo",
+    subtitle = "Subtitulo",
+    caption = "Data from test.csv"
+  )
+
+test
+```
