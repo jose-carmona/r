@@ -1,6 +1,8 @@
 library(shiny)
 library(shinydashboard)
 library(ggplot2)
+library("jsonlite")
+library("RCurl")
 
 ui <- dashboardPage(
 
@@ -39,8 +41,14 @@ server <- function(input, output) {
   # Reactive value for selected dataset ----
   datasetInput <- read.csv(file="/data/test.csv", header=TRUE, sep=",")
 
+  df1 <- fromJSON(getURL("https://proyectos.eprinsa.es/time_entries.json?limit=200&spent_on=%3E%3C2018-01-01|2018-02-01"))
+  horas <- df1[["time_entries"]][["hours"]]
+  actividades <- df1[["time_entries"]][["activity"]][["name"]]
+  dt_act_h <- data.frame( actividades, horas)
+  sumas <- aggregate(x=dt_act_h$horas, by=list(actividades=dt_act_h$actividades), FUN=sum)
+
   # Table of selected dataset ----
-  output$table <- renderTable(datasetInput)
+  output$table <- renderTable(sumas)
 
   # Downloadable csv of selected dataset ----
   output$downloadData <- downloadHandler(
@@ -78,9 +86,9 @@ server <- function(input, output) {
 
     # Render a barplot
     # barplot(datasetInput$field_dotacion_economica, ylab="ylab", xlab="xlab")
-    ggplot(data = datasetInput) +
-      geom_point(mapping = aes(x = id, y = num), color = "blue" ) +
-      geom_smooth(mapping = aes(x = id, y = num))
+    ggplot(dt_act_h, aes( x=1, fill=actividades, weight=horas)) + geom_bar() + coord_polar(theta="y")
+
+    
   })
 
 

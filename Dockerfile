@@ -1,7 +1,7 @@
-FROM rocker/shiny
+FROM rocker/tidyverse
 
 MAINTAINER Jose Carmona
 
-RUN R -e "install.packages(c('ggplot2','shinydashboard'), repos='https://cran.rstudio.com/')" 
+RUN R -e "install.packages(c('shinydashboard'), repos='https://cran.rstudio.com/')"
 
 EXPOSE 3838

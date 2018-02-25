@@ -1,0 +1,69 @@
+---
+title: "Time Entries historicos"
+author: "jose"
+date: "19/2/2018"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Carga de Time Entries histórico de REC
+
+Nos referimos a entradas anteriores a 1-1-2018
+
+```{r}
+options(encoding = "UTF-8")
+library(shiny)
+library(jsonlite)
+library(dplyr)
+
+w_URL <- "https://proyectos.eprinsa.es/time_entries.json"
+w_key <- Sys.getenv("REDMINE_KEY")
+
+p_rec <- 476
+
+w_flag <- TRUE
+w_offset <- 0
+w_limit <- 100
+w_fe_limite <- "><2010-01-01|2017-12-31"
+w_res <- data_frame()
+
+while(w_flag) {
+
+  sURL <- c(paste0( w_URL, "?key=", w_key),
+           paste0("project_id=", p_rec), 
+           paste0("limit=", w_limit),
+           paste0("offset=", w_offset),
+           paste0("spent_on=", w_fe_limite)
+           )
+  response <- fromJSON(paste(sURL, collapse="&"))
+  w_total_count <- response$total_count
+  w_sel <- bind_cols( id = response[["time_entries"]][["issue"]][["id"]], 
+                      hours = response[["time_entries"]][["hours"]],
+                      spent_on = response[["time_entries"]][["spent_on"]],
+                      project.name = response[["time_entries"]][["project"]][["name"]],
+                      user.name = response[["time_entries"]][["user"]][["name"]],
+                      activity.name = response[["time_entries"]][["activity"]][["name"]],
+                      comments = response[["time_entries"]][["comments"]]
+                    )
+
+  w_res <- bind_rows( w_res, w_sel )
+  w_flag <- (w_total_count > nrow(w_res))
+  w_offset <- w_offset + w_limit
+}
+
+te_rec_antes_2018 <- w_res
+
+```
+
+### Guardamos
+
+```{r}
+
+save(te_rec_antes_2018, file="/data/te_rec_antes_2018.Rda")
+
+```
+

@@ -1,27 +1,202 @@
 ---
-title: "Test"
+title: "CM Recaudación"
 author: "jose_carmona"
 runtime: shiny
 ---
 
-##
-##
-### Carga de paquetes
+# Cálculo de cuadro de mandos de Equipo Recaudación
 
-Prueba
+### KPIs
+
+* Evolución de sprint
+    - Peticiones/horas en el sprint no imprevisto. Frente a...
+    - Peticiones/horas en el sprint no imprevisto terminando.
+* Deuda técnica:
+    - Peticiones / horas pendientes por Error
+* Compromisos:
+    - Módulos / Peticiones / horas en Obligatorio
+
+### Carga de librerías
 
 ```{r}
+options(encoding = "UTF-8")
+library(shiny)
+library(jsonlite)
 library(ggplot2)
-
-test <- read.csv("/data/test.csv")
-
-ggplot(test, aes(id, num)) +
-  geom_point(aes(colour = id)) +
-  labs(
-    title = "Titulo",
-    subtitle = "Subtitulo",
-    caption = "Data from test.csv"
-  )
-
-test
+library(dplyr)
 ```
+
+### Versiones
+
+```{r}
+w_URL <- "https://proyectos.eprinsa.es/time_entries.json"
+w_key <- Sys.getenv("REDMINE_KEY")
+
+r_0_proxima <- 1258
+r_1_obligatirio <- 1213
+r_actual <- 1438
+
+p_rec <- 476
+
+cm_rec <- list(
+  obligatorio_peticiones = NA,
+  por_error_peticiones = NA,
+  por_error_estimado = NA
+)
+
+```
+
+### Cálculos
+
+
+* Peticiones / Horas pendientes por Error
+
+```{r}
+w_flag <- TRUE
+w_offset <- 0
+w_limit <- 100
+w_res <- data_frame()
+
+while(w_flag) {
+
+  sURL <- c(paste0( w_URL, "?key=", w_key),
+           paste0("project_id=", p_rec), 
+           paste0("limit=", w_limit),
+           paste0("offset=", w_offset),
+           "status_id=open",
+           "cf_35=Error"
+           )
+  response <- fromJSON(paste(sURL, collapse="&"))
+  w_total_count <- response$total_count
+  w_res <- bind_rows( w_res, select(response$issues, id, estimated_hours) )
+  w_flag <- (w_total_count > nrow(w_res))
+  w_offset <- w_offset + w_limit
+}
+
+cm_rec$por_error_peticiones <- nrow(w_res)
+cm_rec$por_error_estimado <- sum(w_res$estimated_hours, na.rm = TRUE)
+
+```
+
+### Time Entries de Recaudación
+
+```{r}
+w_flag <- TRUE
+w_offset <- 0
+w_res <- data_frame()
+w_fe_limite <- "><2018-01-01|2018-12-31"
+
+while(w_flag) {
+
+  sURL <- c(paste0( w_URL, "?key=", w_key),
+           paste0("project_id=", p_rec), 
+           paste0("limit=", w_limit),
+           paste0("offset=", w_offset),
+           paste0("spent_on=", w_fe_limite)
+           )
+  response <- fromJSON(paste(sURL, collapse="&"))
+  w_total_count <- response$total_count
+  w_sel <- bind_cols( id = response[["time_entries"]][["issue"]][["id"]], 
+                      hours = response[["time_entries"]][["hours"]],
+                      spent_on = response[["time_entries"]][["spent_on"]],
+                      project.name = response[["time_entries"]][["project"]][["name"]],
+                      user.name = response[["time_entries"]][["user"]][["name"]],
+                      activity.name = response[["time_entries"]][["activity"]][["name"]],
+                      comments = response[["time_entries"]][["comments"]]
+                    )
+
+  w_res <- bind_rows( w_res, w_sel )
+  w_flag <- (w_total_count > nrow(w_res))
+  w_offset <- w_offset + w_limit
+}
+
+load("/data/te_rec_antes_2018.Rda")
+
+te_rec <- bind_rows(te_rec_antes_2018, w_res)
+
+grp_por_peticion <- group_by(te_rec, id)
+horas_peticion <- summarise(grp_por_peticion, horas = sum(hours))
+
+```
+
+
+* Módulos / Tareas / Horas en Obligatorio
+
+```{r}
+w_flag <- TRUE
+w_offset <- 0
+w_res <- data_frame()
+
+while(w_flag) {
+
+  sURL <- c(paste0( w_URL, "?key=", w_key),
+           paste0("project_id=", p_rec), 
+           paste0("limit=", w_limit),
+           paste0("offset=", w_offset),
+           paste0("fixed_version_id=", r_1_obligatirio),
+           "status_id=open"
+           )
+  response <- fromJSON(paste(sURL, collapse="&"))
+  w_total_count <- response$total_count
+  w_sel <- bind_cols( id = response[["issues"]][["id"]], 
+                      tracker.name = response[["issues"]][["tracker"]][["name"]],
+                      estimated_hours = response[["issues"]][["estimated_hours"]])
+  w_res <- bind_rows( w_res, w_sel )
+  w_flag <- (w_total_count > nrow(w_res))
+  w_offset <- w_offset + w_limit
+}
+
+obligatorio <- left_join( w_res, horas_peticion, by = "id" )
+
+grp_modulo_tarea <- group_by(obligatorio,tracker.name)
+
+cm_rec$obligatorio_peticiones <- summarise(grp_modulo_tarea, estimated_hours = sum(estimated_hours, na.rm = TRUE), horas = sum(horas, na.rm = TRUE))
+
+cm_rec
+```
+
+
+* Peticiones / Horas sprint actual
+
+```{r}
+w_flag <- TRUE
+w_offset <- 0
+w_res <- data_frame()
+
+while(w_flag) {
+
+  sURL <- c(paste0( w_URL, "?key=", w_key),
+           paste0("project_id=", p_rec), 
+           paste0("limit=", w_limit),
+           paste0("offset=", w_offset),
+           paste0("fixed_version_id=", r_actual),
+           "status_id=*"
+           )
+  response <- fromJSON(paste(sURL, collapse="&"))
+  w_total_count <- response$total_count
+  w_sel <- bind_cols( id = response$issues$id, 
+                      tracker.name = response$issues$tracker$name,
+                      estimated_hours = response$issues$estimated_hours,
+                      imprevisto = sapply(response$issues$custom_fields, function(x) x[x$name=="Imprevisto",]$value==1) )
+  w_res <- bind_rows( w_res, w_sel )
+  w_flag <- (w_total_count > nrow(w_res))
+  w_offset <- w_offset + w_limit
+}
+
+sprint_actual <- left_join( w_res, horas_peticion, by = "id" )
+
+te_sprint_actual <- left_join( w_res, te_rec, by = "id")
+
+cm_rec$sprint_estimado <- sum(sprint_actual$estimated_hours, na.rm = TRUE)
+
+
+
+cm_rec$time <- Sys.time()
+```
+
+### Guardamos Cuadro de Mandos
+
+```{r}
+save(cm_rec,file="/data/cm_rec.Rda")
+```
+
