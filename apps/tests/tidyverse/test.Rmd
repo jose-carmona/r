@@ -29,7 +29,7 @@ library(dplyr)
 ### Versiones
 
 ```{r}
-w_URL <- "https://proyectos.eprinsa.es/time_entries.json"
+w_URL <- "https://proyectos.eprinsa.es/"
 w_key <- Sys.getenv("REDMINE_KEY")
 
 r_0_proxima <- 1258
@@ -59,7 +59,7 @@ w_res <- data_frame()
 
 while(w_flag) {
 
-  sURL <- c(paste0( w_URL, "?key=", w_key),
+  sURL <- c(paste0( w_URL, "issues.json?key=", w_key),
            paste0("project_id=", p_rec), 
            paste0("limit=", w_limit),
            paste0("offset=", w_offset),
@@ -68,9 +68,14 @@ while(w_flag) {
            )
   response <- fromJSON(paste(sURL, collapse="&"))
   w_total_count <- response$total_count
-  w_res <- bind_rows( w_res, select(response$issues, id, estimated_hours) )
+  w_sel <- bind_cols( id = response$issues$id, 
+                      estimated_hours = response$issue$estimated_hours
+                    )
+
+  w_res <- bind_rows( w_res, w_sel )
   w_flag <- (w_total_count > nrow(w_res))
   w_offset <- w_offset + w_limit
+
 }
 
 cm_rec$por_error_peticiones <- nrow(w_res)
@@ -88,7 +93,7 @@ w_fe_limite <- "><2018-01-01|2018-12-31"
 
 while(w_flag) {
 
-  sURL <- c(paste0( w_URL, "?key=", w_key),
+  sURL <- c(paste0( w_URL, "time_entries.json?key=", w_key),
            paste0("project_id=", p_rec), 
            paste0("limit=", w_limit),
            paste0("offset=", w_offset),
@@ -129,7 +134,7 @@ w_res <- data_frame()
 
 while(w_flag) {
 
-  sURL <- c(paste0( w_URL, "?key=", w_key),
+  sURL <- c(paste0( w_URL, "issues.json?key=", w_key),
            paste0("project_id=", p_rec), 
            paste0("limit=", w_limit),
            paste0("offset=", w_offset),
@@ -165,7 +170,7 @@ w_res <- data_frame()
 
 while(w_flag) {
 
-  sURL <- c(paste0( w_URL, "?key=", w_key),
+  sURL <- c(paste0( w_URL, "issues.json?key=", w_key),
            paste0("project_id=", p_rec), 
            paste0("limit=", w_limit),
            paste0("offset=", w_offset),
