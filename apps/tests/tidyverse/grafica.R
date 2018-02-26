@@ -6,7 +6,7 @@ primer_dia <- as.Date('2018-02-19', '%Y-%m-%d')
 # trabajamos sobre w para salvaguardar la información de partida
 w <- te_sprint_actual
 
-# Buscamos las estimaciones. Sacamos id, imprevisto y estimado. Si no hay estimación, consideramos 0
+# Buscamos las estimaciones. Sacamos id, imprevisto y estimado. Si no hay estimación, consideramos 0. Ordenado por id
 estimaciones <- w %>% 
                 select( id, imprevisto, estimated_hours  ) %>% 
                 mutate(estimated_hours = ifelse(is.na(estimated_hours), 0, estimated_hours)) %>%
@@ -47,7 +47,10 @@ for( n in names(matriz)) {
 
 # Construimos el Burndown
 
-burndown <- data.frame(colSums(matriz[,c(2:(ncol(matriz)-1))]))
+burndown <- data.frame(pendiente = colSums(matriz[,c(2:(ncol(matriz)-1))]))
 
-
-ggplot(burndown, aes(x = x, y= pendiente)) + geom_line() + geom_smooth()
+ggplot(burndown, aes( x = as.Date(rownames(burndown)), y = pendiente)) +
+  geom_line( aes(group = 1)) + 
+  geom_point() +
+  xlim( c(primer_dia,ultimo_dia) )
+        
