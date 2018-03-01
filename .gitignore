@@ -34,3 +34,17 @@ vignettes/*.pdf
 
 # directorios de trabajo para la imagen docker
 logs/*
+
+# ejemplos que genera Shiny automáticamente al iniciar
+apps/01_*
+apps/02_*
+apps/03_*
+apps/04_*
+apps/05_*
+apps/06_*
+apps/07_*
+apps/08_*
+apps/09_*
+apps/10_*
+apps/11_*
+
