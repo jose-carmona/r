@@ -1,8 +1,6 @@
 library(shiny)
 library(shinydashboard)
 library(ggplot2)
-library("jsonlite")
-library("RCurl")
 
 ui <- dashboardPage(
 
@@ -88,7 +86,7 @@ server <- function(input, output) {
     # barplot(datasetInput$field_dotacion_economica, ylab="ylab", xlab="xlab")
     ggplot(dt_act_h, aes( x=1, fill=actividades, weight=horas)) + geom_bar() + coord_polar(theta="y")
 
-    
+
   })
 
 

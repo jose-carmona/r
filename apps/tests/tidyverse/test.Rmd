@@ -5,7 +5,6 @@ runtime: shiny
 ---
 
 # Cálculo de cuadro de mandos de Equipo Recaudación
-runtime: shiny
 
 ### KPIs
 
@@ -24,7 +23,6 @@ options(encoding = "UTF-8")
 library(shiny)
 library(jsonlite)
 library(ggplot2)
-library(plotly)
 library(dplyr)
 library(knitr)
 library(reshape2)
@@ -70,7 +68,7 @@ w_res <- data_frame()
 while(w_flag) {
 
   sURL <- c(paste0( w_URL, REST_issues,"?","key=", w_key),
-           paste0("project_id=", p_rec), 
+           paste0("project_id=", p_rec),
            paste0("limit=", w_limit),
            paste0("offset=", w_offset),
            "status_id=open",
@@ -78,7 +76,7 @@ while(w_flag) {
            )
   response <- fromJSON(paste(sURL, collapse="&"))
   w_total_count <- response$total_count
-  w_sel <- bind_cols( id = response$issues$id, 
+  w_sel <- bind_cols( id = response$issues$id,
                       estimated_hours = response$issue$estimated_hours
                     )
 
@@ -104,14 +102,14 @@ w_fe_limite <- paste0("><","2018-01-01","|",as.character(ultimo_dia, '%Y-%m-%d')
 while(w_flag) {
 
   sURL <- c(paste0( w_URL, REST_time_entries,"?","key=", w_key),
-           paste0("project_id=", p_rec), 
+           paste0("project_id=", p_rec),
            paste0("limit=", w_limit),
            paste0("offset=", w_offset),
            paste0("spent_on=", w_fe_limite)
            )
   response <- fromJSON(paste(sURL, collapse="&"))
   w_total_count <- response$total_count
-  w_sel <- bind_cols( id = response$time_entries$issue$id, 
+  w_sel <- bind_cols( id = response$time_entries$issue$id,
                       hours = response$time_entries$hours,
                       spent_on = response$time_entries$spent_on,
                       project.name = response$time_entries$project$name,
@@ -145,7 +143,7 @@ w_res <- data_frame()
 while(w_flag) {
 
   sURL <- c(paste0( w_URL, REST_issues,"?","key=", w_key),
-           paste0("project_id=", p_rec), 
+           paste0("project_id=", p_rec),
            paste0("limit=", w_limit),
            paste0("offset=", w_offset),
            paste0("fixed_version_id=", r_1_obligatirio),
@@ -153,7 +151,7 @@ while(w_flag) {
            )
   response <- fromJSON(paste(sURL, collapse="&"))
   w_total_count <- response$total_count
-  w_sel <- bind_cols( id = response$issues$id, 
+  w_sel <- bind_cols( id = response$issues$id,
                       tracker.name = response$issues$tracker$name,
                       estimated_hours = response$issues$estimated_hours )
   w_res <- bind_rows( w_res, w_sel )
@@ -181,7 +179,7 @@ w_res <- data_frame()
 while(w_flag) {
 
   sURL <- c(paste0( w_URL, REST_issues,"?","key=", w_key),
-           paste0("project_id=", p_rec), 
+           paste0("project_id=", p_rec),
            paste0("limit=", w_limit),
            paste0("offset=", w_offset),
            paste0("fixed_version_id=", r_actual),
@@ -189,7 +187,7 @@ while(w_flag) {
            )
   response <- fromJSON(paste(sURL, collapse="&"))
   w_total_count <- response$total_count
-  w_sel <- bind_cols( id = response$issues$id, 
+  w_sel <- bind_cols( id = response$issues$id,
                       tracker.name = response$issues$tracker$name,
                       estimated_hours = response$issues$estimated_hours,
                       imprevisto = sapply(response$issues$custom_fields, function(x) x[x$name=="Imprevisto",]$value==1) )
@@ -211,17 +209,17 @@ cm_rec$sprint_estimado <- sum(sprint_actual$estimated_hours, na.rm = TRUE)
 w <- te_sprint_actual
 
 # Buscamos las estimaciones. Sacamos id, imprevisto y estimado. Si no hay estimación, consideramos 0. Ordenado por id
-estimaciones <- w %>% 
-                select( id, imprevisto, estimated_hours  ) %>% 
+estimaciones <- w %>%
+                select( id, imprevisto, estimated_hours  ) %>%
                 mutate(estimated_hours = ifelse(is.na(estimated_hours), 0, estimated_hours)) %>%
-                distinct() %>% 
+                distinct() %>%
                 arrange(id)
 
 # suma de todas las imputaciones anteriores al periodo estudiado
 imputaciones_iniciales <- w %>% filter( hours > 0, spent_on < primer_dia) %>% group_by(id) %>% summarise( horas_iniciales = sum(hours))
 
 # pendiente incial
-pendiente_inicial <- left_join( estimaciones, imputaciones_iniciales) %>% 
+pendiente_inicial <- left_join( estimaciones, imputaciones_iniciales) %>%
                      mutate( horas_iniciales = ifelse( is.na(horas_iniciales), 0, horas_iniciales) )
 
 pendiente_inicial$pendiente_inicio <- pendiente_inicial$estimated_hours - pendiente_inicial$horas_iniciales
@@ -252,23 +250,46 @@ kable(matriz)
 ```
 
 ```{r}
-# Construimos el Burndown
+molten = melt(matriz, id = c("id", "imprevisto"), na.rm = TRUE)
 
-burndown <- data.frame( pendiente = colSums( matriz[,grep( "....-..-..", names(matriz))]) )
-burndown$imprevisto_pendiente <- colSums( subset( matriz, imprevisto == TRUE )[,grep( "....-..-..", names(matriz))] ) 
+g1 <- molten %>% filter(variable!="NA") %>% group_by(variable) %>% summarise(pendiente = sum(value)) %>% arrange(variable)
+g2 <- molten %>% filter(variable!="NA", imprevisto) %>% group_by(variable) %>% summarise(imprevisto_pendiente = sum(value)) %>% arrange(variable)
 
-gg <- ggplot(burndown, aes( x = as.Date(rownames(burndown)), y = pendiente)) +
-  geom_line( aes(group = 1) ) + 
+grafico <- inner_join(g1, g2, by = "variable")
+
+grafico
+```
+
+```{r}
+gg <- ggplot(grafico, aes( x = as.Date(variable, "%Y-%m-%d"), y = pendiente, group = 1 ) ) +
+  geom_line() +
   geom_point() +
   geom_smooth( method = "lm" ) +
-  geom_line( aes(y=imprevisto_pendiente) ) +
-  xlim( c(primer_dia,ultimo_dia) )
+  geom_line( aes( y = imprevisto_pendiente) ) +
+  geom_point( aes( x=ultimo_dia, y=0))
+
 
 gg
 
-p <- ggplotly(gg)
+```
 
-p
+
+```{r}
+# Construimos el Burndown
+
+burndown <- data.frame( pendiente = colSums( matriz[,grep( "....-..-..", names(matriz))]) )
+burndown$imprevisto_pendiente <- colSums( subset( matriz, imprevisto == TRUE )[,grep( "....-..-..", names(matriz))] )
+
+gg <- ggplot(burndown, aes( x = as.Date(rownames(burndown)), y = pendiente), colours()) +
+  geom_line( aes(group = 1) ) +
+  scale_fill_brewer() +
+  geom_point() +
+  geom_smooth( method = "lm" ) +
+  geom_line( aes(y=imprevisto_pendiente) ) +
+  geom_point( aes( x=ultimo_dia, y=0)) +
+  xlim( c(primer_dia,ultimo_dia) )
+
+gg
 ```
 
 ### Guardamos Cuadro de Mandos
@@ -280,4 +301,3 @@ cm_rec$time <- Sys.time()
 # salvamos Cuadro de Mandos
 save(cm_rec,file="/data/cm_rec.Rda")
 ```
-

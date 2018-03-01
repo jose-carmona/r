@@ -53,4 +53,5 @@ ggplot(burndown, aes( x = as.Date(rownames(burndown)), y = pendiente)) +
   geom_line( aes(group = 1)) + 
   geom_point() +
   xlim( c(primer_dia,ultimo_dia) )
+
         
