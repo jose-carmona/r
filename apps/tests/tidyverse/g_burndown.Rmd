@@ -1,0 +1,107 @@
+---
+title: "Burndown Equipo REC"
+author: "jose"
+date: "19/2/2018"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+g <- data.frame(
+  f = c( as.Date("19-2-2018","%d-%m-%Y"),
+         as.Date("20-2-2018","%d-%m-%Y"),
+         as.Date("21-2-2018","%d-%m-%Y"),
+         as.Date("22-2-2018","%d-%m-%Y"),
+         as.Date("23-2-2018","%d-%m-%Y"),
+         as.Date("26-2-2018","%d-%m-%Y"),
+         as.Date("01-3-2018","%d-%m-%Y"),
+         as.Date("02-3-2018","%d-%m-%Y"),
+         as.Date("06-3-2018","%d-%m-%Y"),
+         as.Date("08-3-2018","%d-%m-%Y"),
+         as.Date("09-3-2018","%d-%m-%Y")
+        ) ,
+  e = c( 432,
+         432-(1*432/18),
+         432-(2*432/18),
+         432-(3*432/18),
+         432-(4*432/18),
+         432-(7*432/18),
+         432-(10*432/18),
+         432-(11*432/18),
+         432-(15*432/18),
+         432-(17*432/18),
+         0
+         ),
+  p = c( 432-68.33,
+         432-73.83,
+         432-113.11,
+         427-121.58,
+         432-144.58,
+         443-168.33,
+         465-212.83,
+         454-227.83,
+         477-285.33 -( 186-152.83),
+         467-333.58 -( 110-75.33),
+         NA
+         ),
+  i_e = c( 13,
+           13,
+           16,
+           24,
+           45,
+           56,
+           80,
+           64,
+           74,
+           74,
+           NA
+         ),
+  i_p = c( 13-3,
+           13-3,
+           15-9.75,
+           24-9.75,
+           45-11.75,
+           56-11.75,
+           80-19,
+           64-23.75,
+           74-40.50 - (65-53.5),
+           64-40.25 - (29-19.75),
+           NA
+        )
+)
+```
+
+### Burndown
+
+```{r echo=FALSE}
+library(ggplot2)
+
+ggplot( g, aes(x=f, y=e, col="ideal")) +
+  xlim ( c(as.Date("19-2-2018","%d-%m-%Y"), as.Date("9-3-2018","%d-%m-%Y"))) +
+  geom_line( ) +
+  geom_point(aes(y=p, col="pendiente")) +
+  geom_line(aes(y=p, col="pendiente")) +
+  geom_smooth(aes(y=p, col="regresión"), method = "lm") +
+  geom_point(aes(y=i_e, col="imprevisto")) +
+  geom_line(aes(y=i_e, col="imprevisto")) +
+  geom_point(aes(y=i_p, col="imp pendiente")) +
+  geom_line(aes(y=i_p, col="imp pendiente")) 
+```
+
+### Tabla de datos
+
+```{r echo=FALSE}
+library(knitr)
+kable(g)
+```
+
+### Guardamos Cuadro de Mandos
+
+```{r}
+save(g, file="/data/g.Rda")
+```
+

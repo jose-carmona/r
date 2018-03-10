@@ -1,0 +1,33 @@
+---
+title: "Histogramas de Eventos SMS"
+author: "jose"
+date: "9/3/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+eventos <- read.csv("/data/hist_eventos.csv")
+
+eventos <- eventos %>% mutate( fh = as.POSIXct(fh_evento, "%Y-%m-%d %H:%M:%S"))
+```
+
+
+
+```{r}
+library("ggplot2")
+library("scales")
+
+gg <- ggplot( eventos, aes( x = fh, colour = Evento ) ) +
+  geom_freqpoly(bins = 100) +
+  scale_x_datetime(breaks = date_breaks("1 min"),
+                     labels = date_format("%M"),
+                     limits = c(as.POSIXct("2018-03-09 11:00:00", "%Y-%m-%d %H:%M:%S"), 
+                                as.POSIXct("2018-03-09 15:30:00", "%Y-%m-%d %H:%M:%S")) )
+
+gg
+```
+

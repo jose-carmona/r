@@ -1,0 +1,36 @@
+---
+title: "frecuencia"
+author: "jose"
+date: "7/3/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+personas_not <- read.csv("/data/personas_2017_n.csv")
+```
+
+```{r}
+max(personas_not$NUMERO)
+mean(personas_not$NUMERO)
+
+```
+
+```{r}
+library(dplyr)
+
+p <- personas_not %>% group_by(NUMERO) %>% summarise(N = sum(!is.na(CDINTER))) %>% mutate( p = round(N/sum(N),2))
+```
+
+```{r}
+gg <- ggplot( p, aes( x = NUMERO, y = N  )) +
+  geom_col( ) + 
+  geom_label( aes(y = 10000, label = paste0(p*100,"%"))) +
+  xlim (c(0,10))
+
+gg
+```
+

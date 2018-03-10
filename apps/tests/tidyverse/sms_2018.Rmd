@@ -1,0 +1,85 @@
+---
+title: "SMS"
+author: "jose"
+date: "2/3/2018"
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+```
+
+Datos de partida obtenidos en SQL:
+{sql eval=FALSE, connection=, include=FALSE}
+select 
+  ca.fe_inicio_cobro_padron,
+  count(*) personas
+from
+  mpersona p
+  inner join rec_liquidaciones d on (d.cdinter = p.cdinter)
+  inner join rec_ca_cargos ca on (ca.cdi_cargo = d.cdi_cargo)
+  inner join rec_ca_conceptos co on (co.cdi_concepto = ca.cdi_concepto)
+where
+  movil is not null
+  --and d.cd_exaccion in ( '02', '95' )
+  and ca.ejercicio_contraido = 2017
+  and co.cd_tipo_ingreso = '03'
+  and fe_inicio_cobro_padron between to_date('01012017','ddmmyyyy') and to_date('31122017','ddmmyyyy')
+group by 
+  ca.fe_inicio_cobro_padron
+order by
+  count(*) desc
+;
+
+
+
+```{r}
+personas <- read.csv("/data/personas_2017.csv")
+```
+
+
+```{r}
+personas <- mutate(personas, fecha = as.Date(FE_INICIO_COBRO_PADRON, "%d/%m/%Y"))
+```
+
+```{r}
+gg <- ggplot( personas, aes( x= fecha, y = PERSONAS)) +
+  geom_bar(stat = "identity") +
+  geom_point() +
+  geom_text(aes(label=PERSONAS),hjust=0, vjust=-.5) +
+  scale_x_date(date_breaks = "1 months", date_labels = "%m")+
+  xlab( "Meses" ) +
+  ylab( "Mensajes")
+
+gg + theme_light()
+```
+```{r}
+por_meses <- personas %>% group_by(mes=floor_date(fecha, "month")) %>%
+   summarize(total_mes=sum(PERSONAS))
+```
+
+```{r}
+
+gg <- ggplot( por_meses, aes( x= mes, y = total_mes)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label=total_mes),hjust=.5, vjust=-.5) +
+  scale_x_date(date_labels = "%m") +
+  ylab("Total SMS")
+
+gg + theme_light()
+
+```
+Total Mensajes:
+```{r}
+por_meses <- por_meses %>% mutate( mes_s = as.character(mes, "%m")) %>% select(mes_s,total_mes)
+
+kable(por_meses)
+
+sum(personas$PERSONAS)
+```
+
+
