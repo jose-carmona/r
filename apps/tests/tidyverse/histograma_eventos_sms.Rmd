@@ -7,19 +7,26 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+library("scales")
+library(dplyr)
 ```
 
 ```{r}
 eventos <- read.csv("/data/hist_eventos.csv")
 
 eventos <- eventos %>% mutate( fh = as.POSIXct(fh_evento, "%Y-%m-%d %H:%M:%S"))
+
+limites <- c(as.POSIXct(paste0("2018-03-09 ", "09:00:00"), "%Y-%m-%d %H:%M:%S"), 
+             as.POSIXct(paste0("2018-03-09 ", "15:00:00"), "%Y-%m-%d %H:%M:%S"))
+    
+    minutos <- difftime(limites[1], limites[2], units="mins")
+
 ```
 
 
 
 ```{r}
-library("ggplot2")
-library("scales")
 
 gg <- ggplot( eventos, aes( x = fh, colour = Evento ) ) +
   geom_freqpoly(bins = 100) +

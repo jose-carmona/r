@@ -1,8 +1,9 @@
 ---
 title: "CM Recaudación"
 author: "jose_carmona"
-runtime: shiny
 ---
+
+runtime: shiny
 
 # Cálculo de cuadro de mandos de Equipo Recaudación
 
@@ -280,14 +281,14 @@ gg
 burndown <- data.frame( pendiente = colSums( matriz[,grep( "....-..-..", names(matriz))]) )
 burndown$imprevisto_pendiente <- colSums( subset( matriz, imprevisto == TRUE )[,grep( "....-..-..", names(matriz))] )
 
-gg <- ggplot(burndown, aes( x = as.Date(rownames(burndown)), y = pendiente), colours()) +
+gg <- ggplot(burndown, aes( x = as.Date(rownames(burndown)), y = pendiente, colour = "pendiente")) +
   geom_line( aes(group = 1) ) +
-  scale_fill_brewer() +
   geom_point() +
-  geom_smooth( method = "lm" ) +
-  geom_line( aes(y=imprevisto_pendiente) ) +
-  geom_point( aes( x=ultimo_dia, y=0)) +
-  xlim( c(primer_dia,ultimo_dia) )
+  geom_smooth( aes( colour = "regresión"), method = "lm" ) +
+  geom_line( aes(y=imprevisto_pendiente, colour = "Imprevisto pendiente") ) +
+  geom_segment( aes( x=primer_dia, xend = ultimo_dia, y = 500, yend = 0, colour = "ideal" ) )+
+  xlim( c(primer_dia,ultimo_dia) ) +
+  xlab( "Fechas") 
 
 gg
 ```
