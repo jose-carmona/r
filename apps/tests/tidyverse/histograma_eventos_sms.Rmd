@@ -20,8 +20,9 @@ eventos <- eventos %>% mutate( fh = as.POSIXct(fh_evento, "%Y-%m-%d %H:%M:%S"))
 limites <- c(as.POSIXct(paste0("2018-03-09 ", "09:00:00"), "%Y-%m-%d %H:%M:%S"), 
              as.POSIXct(paste0("2018-03-09 ", "15:00:00"), "%Y-%m-%d %H:%M:%S"))
     
-    minutos <- difftime(limites[1], limites[2], units="mins")
+minutos <- difftime(limites[2], limites[1], units="mins")
 
+minutos
 ```
 
 
